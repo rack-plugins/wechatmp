@@ -7,12 +7,7 @@ import (
 
 	"github.com/fimreal/goutils/ezap"
 	"github.com/gin-gonic/gin"
-	"github.com/gogf/gf/container/gmap"
 	"github.com/spf13/viper"
-)
-
-var (
-	MsgContext = gmap.New()
 )
 
 // 接收公众号消息

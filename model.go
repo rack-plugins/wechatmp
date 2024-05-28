@@ -4,10 +4,16 @@ import (
 	"encoding/xml"
 	"sync"
 	"time"
+
+	"github.com/gogf/gf/container/gmap"
 )
 
-// 存储 access_token，用于请求订阅号 api
-var WechatmpAccessToken AccessToken
+var (
+	// 存储消息
+	MsgContext = gmap.New()
+	// 存储 access_token，用于请求订阅号 api
+	WechatmpAccessToken AccessToken
+)
 
 type AccessToken struct {
 	Token  string
