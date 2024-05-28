@@ -10,7 +10,7 @@ import (
 const (
 	ID            = "wechatmp"
 	Comment       = "[module] wechatmp api service"
-	RoutePrefix   = "/wx"
+	RoutePrefix   = "/"
 	DefaultEnable = false
 )
 
@@ -34,6 +34,10 @@ func ServeFlag(serveCmd *cobra.Command) {
 	serveCmd.Flags().String(ID+".token", "", "公众号令牌 (Token)")
 
 	serveCmd.Flags().String(ID+".geminiapikey", "", "Gemini_API_Token")
+	serveCmd.Flags().String(ID+".modelname", "gemini-1.0-pro", "默认 gemini-1.0-pro")
+	serveCmd.Flags().String(ID+".modelprompt", "你是一个没有名字的人工智能助手,回答问题时尽量口语化,不要使用markdown文本标记.", "设置提示词")
+	serveCmd.Flags().String(ID+".modelendpoint", "generativelanguage.googleapis.com", "设置模型地址")
+	serveCmd.Flags().Bool(ID+".safetymode", false, "开启安全模式")
 }
 
 func init() {

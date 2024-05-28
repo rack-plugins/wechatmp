@@ -39,11 +39,11 @@ func ReplyWechatmpMessage(c *gin.Context) {
 		c.XML(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ezap.Debugf("%+v", message)
+	ezap.Infof("收到请求信息: %+v", message)
 
 	// 生成回复消息
 	reply := replyMessage(message)
-	ezap.Debugf("回复消息: %+v", reply)
+	ezap.Infof("回复消息: %+v", reply)
 
 	c.XML(http.StatusOK, reply)
 }
@@ -67,7 +67,8 @@ func replyMessage(message WechatmpMessage) *WechatmpMessage {
 			out = "出现错误，请联系管理员，稍后再来试一试吧。"
 		}
 		// 回复内容使用 CDATA 包裹, 解决换行问题
-		reply.Content = "<![CDATA[" + out + "]]>"
+		// reply.Content = "<![CDATA[" + out + "]]>"
+		reply.Content = out
 	default:
 		reply.Content = "抱歉，暂时无法处理此类型消息"
 	}
@@ -80,11 +81,11 @@ func replyTextMessage(message WechatmpMessage) (reply string, err error) {
 	// 处理重试消息
 	if message.Content == "重试" {
 		reply = "未获取到历史消息，请尝试重新发送问题吧"
-		if oldMsgId := MsgContext.Get(message.FromUserName).(int64); oldMsgId != 0 {
+		if oldMsgId := MsgContext.GetOrSet(message.FromUserName, int64(0)).(int64); oldMsgId != int64(0) {
 			out := MsgContext.Get(oldMsgId).(string)
 			if out != "" {
 				reply = out
-				ezap.Debugf("获取到重试回复的消息: msgId: %d", oldMsgId)
+				ezap.Infof("获取到重试回复的消息: msgId: %d", oldMsgId)
 			}
 			ezap.Debugf("未获取到重试回复的消息: msgId: %d", oldMsgId)
 		}
@@ -92,7 +93,7 @@ func replyTextMessage(message WechatmpMessage) (reply string, err error) {
 	}
 
 	// 处理 msgId 相同的重复请求，返回历史消息
-	if MsgContext.Get(message.FromUserName).(int64) == message.MsgId {
+	if MsgContext.GetOrSet(message.FromUserName, int64(0)).(int64) == message.MsgId {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
@@ -113,11 +114,12 @@ func replyTextMessage(message WechatmpMessage) (reply string, err error) {
 		case <-ctx.Done():
 		}
 
+		ezap.Infof("获取到超时回复的消息: msgId: %d", message.MsgId)
 		return
 	}
 
-	// 正常流程，询问 gemini
-	reply, err = askGemini(message.Content)
+	// 正常流程，询问 llm
+	reply, err = LLM.Ask(message.Content)
 	if err == nil {
 		// 保存新消息到用户对话上下文
 		MsgContext.Set(message.FromUserName, message.MsgId)

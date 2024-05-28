@@ -1,14 +1,31 @@
 package wechatmp
 
 import (
+	"time"
+
 	"github.com/rack-plugins/wechatmp/gemini"
 	"github.com/spf13/viper"
 )
 
-func askGemini(question string) (answer string, err error) {
-	// 创建 llm 会话
-	llm := gemini.NewSession(viper.GetString(ID + ".geminiapikey"))
-	llm.SetModelPrompt("你是一个没有名字的人工智能助手,回答问题时尽量口语化,不要使用markdown文本标记.")
+var LLM LLMInstance
 
-	return llm.Ask(question)
+type LLMInstance interface {
+	Ask(question string) (answer string, err error)
+	SetModelName(name string)
+	SetModelEndpoint(endpoint string)
+	SetModelPrompt(prompt string)
+	SetSatetyMode(enabled bool)
+}
+
+func init() {
+	go func() {
+		// 待启动加载参数后再执行
+		time.Sleep(3 * time.Second)
+		// 创建 llm 会话
+		LLM = gemini.NewSession(viper.GetString(ID + ".geminiapikey"))
+		LLM.SetModelPrompt(viper.GetString(ID + ".modelprompt"))
+		LLM.SetModelName(viper.GetString(ID + ".modelname"))
+		LLM.SetModelEndpoint(viper.GetString(ID + ".modelendpoint"))
+		LLM.SetSatetyMode(viper.GetBool(ID + ".safetymode"))
+	}()
 }

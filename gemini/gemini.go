@@ -21,7 +21,7 @@ type Session struct {
 func NewSession(token string) *Session {
 	return &Session{
 		// https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versioning?hl=zh-cn#stable-versions-available for more information
-		Name:     "gemini-pro",
+		Name:     "gemini-1.0-pro",
 		Token:    token,
 		Endpoint: "generativelanguage.googleapis.com",
 		Prompt:   nil,
@@ -30,14 +30,22 @@ func NewSession(token string) *Session {
 
 func (s *Session) SetModelName(name string) {
 	s.Name = name
+	ezap.Info("Set Model Name: ", s.Name)
 }
 
 func (s *Session) SetModelEndpoint(endpoint string) {
 	s.Endpoint = endpoint
+	ezap.Info("Set Model Endpoint: ", s.Endpoint)
 }
 
 func (s *Session) SetModelPrompt(prompt string) {
 	s.Prompt = genai.Text(prompt)
+	ezap.Info("Set Model Prompt: ", s.Prompt)
+}
+
+func (s *Session) SetSatetyMode(enabled bool) {
+	s.SafetyMode = enabled
+	ezap.Info("Set Safety Mode: ", s.SafetyMode)
 }
 
 func (s *Session) Ask(question string) (answer string, err error) {
@@ -71,16 +79,16 @@ func (s *Session) Ask(question string) (answer string, err error) {
 		}
 	}
 
-	ezap.Debug("Ask Gemini: ", s.Prompt, question)
+	ezap.Info("Ask Gemini: ", question)
 	resp, err := model.GenerateContent(ctx, genai.Text(question))
 	if err != nil {
 		return "", err
 	}
 	ctx.Done()
-	return ReadAllFrom(resp), err
+	return readAllFrom(resp), err
 }
 
-func ReadAllFrom(resp *genai.GenerateContentResponse) string {
+func readAllFrom(resp *genai.GenerateContentResponse) string {
 	var parts strings.Builder
 	for _, cand := range resp.Candidates {
 		if cand.Content != nil {
