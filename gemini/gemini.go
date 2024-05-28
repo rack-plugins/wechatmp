@@ -43,7 +43,7 @@ func (s *Session) SetModelPrompt(prompt string) {
 	ezap.Info("Set Model Prompt: ", s.Prompt)
 }
 
-func (s *Session) SetSatetyMode(enabled bool) {
+func (s *Session) SetSafetyMode(enabled bool) {
 	s.SafetyMode = enabled
 	ezap.Info("Set Safety Mode: ", s.SafetyMode)
 }

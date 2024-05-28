@@ -1,6 +1,7 @@
 package wechatmp
 
 import (
+	"strings"
 	"time"
 
 	"github.com/rack-plugins/wechatmp/gemini"
@@ -14,18 +15,33 @@ type LLMInstance interface {
 	SetModelName(name string)
 	SetModelEndpoint(endpoint string)
 	SetModelPrompt(prompt string)
-	SetSatetyMode(enabled bool)
+	SetSafetyMode(enabled bool)
 }
 
 func init() {
 	go func() {
-		// 待启动加载参数后再执行
+		// 确保启动加载变量后再执行
 		time.Sleep(3 * time.Second)
-		// 创建 llm 会话
-		LLM = gemini.NewSession(viper.GetString(ID + ".geminiapikey"))
-		LLM.SetModelPrompt(viper.GetString(ID + ".modelprompt"))
-		LLM.SetModelName(viper.GetString(ID + ".modelname"))
-		LLM.SetModelEndpoint(viper.GetString(ID + ".modelendpoint"))
-		LLM.SetSatetyMode(viper.GetBool(ID + ".safetymode"))
+
+		modelName := viper.GetString(ID + ".modelname")
+		modelEndpoint := viper.GetString(ID + ".modelendpoint")
+		modelPrompt := viper.GetString(ID + ".modelprompt")
+		modelApiKey := viper.GetString(ID + ".modelapikey")
+		safetymode := viper.GetBool(ID + ".safetymode")
+
+		switch {
+		case strings.HasPrefix(modelName, "gemini"):
+			LLM = gemini.NewSession(modelApiKey)
+		// case strings.HasPrefix(modelName, "anotherModel"):
+		//  LLM = anotherModel.NewSession(modelApiKey)
+		default:
+			LLM = gemini.NewSession(modelApiKey)
+		}
+
+		// 设置模型名称、提示语、安全模式
+		LLM.SetModelPrompt(modelPrompt)
+		LLM.SetModelName(modelName)
+		LLM.SetModelEndpoint(modelEndpoint)
+		LLM.SetSafetyMode(safetymode)
 	}()
 }

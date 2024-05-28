@@ -33,8 +33,8 @@ func ServeFlag(serveCmd *cobra.Command) {
 	serveCmd.Flags().String(ID+".appsecret", "", "公众号开发者密码 (AppSecret)")
 	serveCmd.Flags().String(ID+".token", "", "公众号令牌 (Token)")
 
-	serveCmd.Flags().String(ID+".geminiapikey", "", "Gemini_API_Token")
-	serveCmd.Flags().String(ID+".modelname", "gemini-1.0-pro", "默认 gemini-1.0-pro")
+	serveCmd.Flags().String(ID+".modelapikey", "", "Gemini_API_Token")
+	serveCmd.Flags().String(ID+".modelname", "gemini-1.5-pro-latest", "默认使用 gemini-1.5-pro-latest，目前仅支持免费的 gemini")
 	serveCmd.Flags().String(ID+".modelprompt", "你是一个没有名字的人工智能助手,回答问题时尽量口语化,不要使用markdown文本标记.", "设置提示词")
 	serveCmd.Flags().String(ID+".modelendpoint", "generativelanguage.googleapis.com", "设置模型地址")
 	serveCmd.Flags().Bool(ID+".safetymode", false, "开启安全模式")

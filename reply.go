@@ -66,8 +66,6 @@ func replyMessage(message WechatmpMessage) *WechatmpMessage {
 			ezap.Error("构造文本消息回复时出错: ", err.Error())
 			out = "出现错误，请联系管理员，稍后再来试一试吧。"
 		}
-		// 回复内容使用 CDATA 包裹, 解决换行问题
-		// reply.Content = "<![CDATA[" + out + "]]>"
 		reply.Content = out
 	default:
 		reply.Content = "抱歉，暂时无法处理此类型消息"
