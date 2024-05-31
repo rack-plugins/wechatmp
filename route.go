@@ -14,5 +14,5 @@ func AddRoute(g *gin.Engine) {
 
 	r := g.Group(RoutePrefix)
 	r.GET("/wx", CheckSignature)
-	r.POST("/wx", ReplyWechatmpMessage)
+	r.POST("/wx", HandleRequest)
 }

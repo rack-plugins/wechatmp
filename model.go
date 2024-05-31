@@ -46,7 +46,11 @@ type WechatmpMessage struct {
 	ToUserName   string `json:"ToUserName" xml:"ToUserName"`
 	FromUserName string `json:"FromUserName" xml:"FromUserName"`
 	CreateTime   int64  `json:"CreateTime" xml:"CreateTime"`
-	MsgType      string `json:"MsgType" xml:"MsgType"` // text, image, voice, video, shortvideo, location, link
+	MsgType      string `json:"MsgType" xml:"MsgType"` // event, text, image, voice, video, shortvideo, location, link
+
+	// event
+	Event    string `json:"Event" xml:"Event"`       // subscribe, unsubscribe, SCAN, LOCATION, CLICK, VIEW
+	EventKey string `json:"EventKey" xml:"EventKey"` // 事件KEY值，qrscene_为前缀，后面为二维码的参数值，或者与自定义菜单接口中KEY值对应
 
 	// text
 	Content string `json:"Content" xml:"Content"`

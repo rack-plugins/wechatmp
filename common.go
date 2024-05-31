@@ -15,6 +15,72 @@ import (
 	"github.com/spf13/viper"
 )
 
+// 接收公众号消息
+// https://mp.weixin.qq.com/debug/cgi-bin/apiinfo?t=index&type=%E8%87%AA%E5%AE%9A%E4%B9%89%E8%8F%9C%E5%8D%95&form=%E8%87%AA%E5%AE%9A%E4%B9%89%E8%8F%9C%E5%8D%95%E5%88%9B%E5%BB%BA%E6%8E%A5%E5%8F%A3%20/menu/creat
+func HandleRequest(c *gin.Context) {
+	// 获取微信加密签名
+	var sig Signature
+	sig.Signature = c.Query("signature")
+	sig.Timestamp = c.Query("timestamp")
+	sig.Nonce = c.Query("nonce")
+
+	token := viper.GetString(ID + ".token")
+	if !sig.checkSignature(token) {
+		ezap.Error("签名验证失败")
+		c.XML(http.StatusBadRequest, gin.H{"error": "签名验证失败"})
+		return
+	}
+	ezap.Debug("签名验证成功")
+
+	// 解析接收到的信息
+	var message WechatmpMessage
+	err := c.ShouldBind(&message)
+	if err != nil {
+		c.XML(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ezap.Infof("收到请求信息: %+v", message)
+
+	// 生成回复消息
+	reply := replyWechat(message)
+	ezap.Infof("回复消息: %+v", reply)
+
+	c.XML(http.StatusOK, reply)
+}
+
+func replyWechat(message WechatmpMessage) *WechatmpMessage {
+	// 创建回复消息模板
+	reply := &WechatmpMessage{
+		ToUserName:   message.FromUserName,
+		FromUserName: message.ToUserName,
+		CreateTime:   time.Now().Unix(),
+		MsgId:        message.MsgId,
+		MsgType:      "text",
+	}
+
+	// 根据消息类型回复
+	var err error
+	switch message.MsgType {
+	case "text":
+		reply.Content, err = message.HandleText()
+		if err != nil {
+			ezap.Error("构造文本消息回复时出错: ", err.Error())
+			reply.Content = "出现错误，请联系管理员，稍后再来试一试吧。"
+		}
+	case "event":
+		reply.Content, err = message.HandleEvent()
+		if err != nil {
+			ezap.Error("构造事件消息回复时出错: ", err.Error())
+			reply.Content = "出现错误，请联系管理员，稍后再来试一试吧。"
+		}
+	// case "image":
+	default:
+		reply.Content = "抱歉，暂时无法处理此类型消息"
+	}
+
+	return reply
+}
+
 func CheckSignature(c *gin.Context) {
 	var sig Signature
 	if err := c.ShouldBind(&sig); err != nil {
