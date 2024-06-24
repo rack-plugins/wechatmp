@@ -23,8 +23,9 @@ func (message *WechatmpMessage) ReplyTextMessage() (reply string, err error) {
 			if out != "" {
 				reply = out
 				ezap.Infof("获取到重试回复的消息: msgId: %d", oldMsgId)
+			} else {
+				ezap.Debugf("未获取到重试回复的消息: msgId: %d", oldMsgId)
 			}
-			ezap.Debugf("未获取到重试回复的消息: msgId: %d", oldMsgId)
 		}
 		return
 	}
