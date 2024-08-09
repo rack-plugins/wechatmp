@@ -44,11 +44,11 @@ type WechatmpMessage struct {
 	MsgId        int64  `json:"MsgId" xml:"MsgId"`               // Message ID
 
 	// Event messages
-	Event    string `json:"Event,omitempty" xml:"Event,omitempty"`       // Event type: subscribe, unsubscribe, SCAN, LOCATION, CLICK, VIEW
-	EventKey string `json:"EventKey,omitempty" xml:"EventKey,omitempty"` // Key value associated with the event, such as QR code parameters or custom menu keys
+	Event    *string `json:"Event,omitempty" xml:"Event,omitempty"`       // Event type: subscribe, unsubscribe, SCAN, LOCATION, CLICK, VIEW
+	EventKey *string `json:"EventKey,omitempty" xml:"EventKey,omitempty"` // Key value associated with the event, such as QR code parameters or custom menu keys
 
 	// Text messages
-	Content string `json:"Content,omitempty" xml:"Content,omitempty"` // Content of the text message
+	Content *string `json:"Content,omitempty" xml:"Content,omitempty"` // Content of the text message
 
 	// Media messages
 	Image *Image `json:"Image,omitempty" xml:"Image,omitempty"` // Image media information

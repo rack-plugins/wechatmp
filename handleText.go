@@ -24,14 +24,18 @@ func (m *WechatmpMessage) HandleText() (reply *WechatmpMessage, err error) {
 		CreateTime:   time.Now().Unix(),
 		MsgId:        m.MsgId,
 		MsgType:      "text", // default: text
+		Content:      new(string),
 	}
 
 	// 处理重试消息
-	if m.Content == "重试" {
-		reply.Content = "未获取到历史消息，请尝试重新发送问题吧"
+	if *(m.Content) == "重试" {
+		msg := "未获取到历史消息，请尝试重新发送问题吧"
+		reply.Content = &msg
 		if oldMsgId := MsgContext.GetOrSet(m.FromUserName, int64(0)).(int64); oldMsgId != int64(0) {
 			out := MsgContext.Get(oldMsgId).(*WechatmpMessage)
 			if out != nil {
+				out.CreateTime = reply.CreateTime
+				out.MsgId = reply.MsgId
 				reply = out
 				ezap.Infof("获取到重试回复的消息: msgId: %d", oldMsgId)
 			} else {
@@ -65,7 +69,8 @@ func (m *WechatmpMessage) HandleText() (reply *WechatmpMessage, err error) {
 		case reply = <-replyChan:
 			return
 		case <-ctx.Done():
-			reply.Content = "生成内容需要一点时间，请稍后发送【重试】重新获取结果。"
+			msg := "生成内容需要一点时间，请稍后发送【重试】重新获取结果。"
+			reply.Content = &msg
 			return
 		}
 
@@ -76,31 +81,37 @@ func (m *WechatmpMessage) HandleText() (reply *WechatmpMessage, err error) {
 
 	// 识别指令
 	switch {
-	case strings.HasPrefix(m.Content, "/help"):
-		reply.Content = helpMsg
+	case strings.HasPrefix(*m.Content, "/help"):
+		msg := helpMsg
+		reply.Content = &msg
 		return
-	case strings.HasPrefix(m.Content, "/draw"):
-		m.Content = strings.TrimPrefix(m.Content, "/draw")
+	case strings.HasPrefix(*m.Content, "/draw"):
+		c := strings.TrimPrefix(*m.Content, "/draw")
+		m.Content = &c
 		// 绘画
 		media, e := m.txt2ImgReply()
-		if e != nil {
+		if e != nil || media.MediaID == "" {
 			ezap.Errorf("%w", e)
-			reply.Content = "我好像处理不过来了，请稍后再试再试一下吧"
+			msg := "我好像处理不过来了，请稍后再试一下吧"
+			reply.Content = &msg
 		} else {
 			// 发送图片消息
 			reply.MsgType = "image"
 			reply.Image = new(Image)
 			reply.Image.MediaId = media.MediaID
+			reply.Content = nil
 		}
 
 	// case strings.HasPrefix(m.Content, "/ask"):
 	default:
 		// 过滤 /ask 指令
-		m.Content = strings.TrimPrefix(m.Content, "/ask")
-		reply.Content, err = m.llmReply()
+		c := strings.TrimPrefix(*m.Content, "/draw")
+		m.Content = &c
+		c, err = m.llmReply()
 		if err != nil {
 			ezap.Errorf("llm ask [%s] error: %v", m.Content, err)
-			reply.Content = "抱歉，我出了点问题，请稍后再试或者换一个方式提问"
+			msg := "抱歉，我出了点问题，请稍后重试或者换一个方式提问"
+			reply.Content = &msg
 		}
 	}
 	// 保存新消息到用户对话上下文
@@ -116,14 +127,14 @@ func (m *WechatmpMessage) HandleText() (reply *WechatmpMessage, err error) {
 // 构造回复消息 - 大模型回复
 func (m *WechatmpMessage) llmReply() (reply string, err error) {
 	// 正常流程，询问 llm
-	return LLM.Ask(m.Content)
+	return LLM.Ask(*m.Content)
 }
 
 // 构造回复消息 - 绘画
 func (m *WechatmpMessage) txt2ImgReply() (media *MediaResponse, err error) {
-	picUrl, e := Txt2Anime(m.Content)
+	picUrl, e := Txt2Anime(*m.Content)
 	if e != nil {
-		err = fmt.Errorf("mlm draw [%s] error: %v", m.Content, e)
+		err = fmt.Errorf("mlm draw [%s] error: %v", *m.Content, e)
 		return
 	}
 	// 下载图片

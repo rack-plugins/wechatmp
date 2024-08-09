@@ -56,13 +56,14 @@ func PassiveReply(m WechatmpMessage) (*WechatmpMessage, error) {
 		return m.HandleEvent()
 	// case "image":
 	default:
+		msg := "我现在无法处理此类型消息"
 		return &WechatmpMessage{
 			ToUserName:   m.FromUserName,
 			FromUserName: m.ToUserName,
 			CreateTime:   time.Now().Unix(),
 			MsgId:        m.MsgId,
 			MsgType:      "text",
-			Content:      "我现在无法处理此类型消息",
+			Content:      &msg,
 		}, nil
 	}
 

@@ -12,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/fimreal/goutils/ezap"
 )
 
 // 微信公众号素材库上传地址，分为临时3天存储和永久存储
@@ -38,49 +40,90 @@ type MediaResponse struct {
 	MediaID   string `json:"media_id,omitempty"`   // 媒体文件标识
 	CreatedAt int64  `json:"created_at,omitempty"` // 媒体文件上传时间戳
 	// URL       string `json:"url,omitempty"`        // 图片素材的 URL, 仅针对图片 uploadImage 接口，这里未实现
+	ErrCode int    `json:"errcode,omitempty"` // 错误码
+	ErrMsg  string `json:"errmsg,omitempty"`  // 错误信息
+}
+
+// 获取文件类型
+// 默认 coze 给出的图片文件没有 png 后缀
+func getImageType(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	header := make([]byte, 8)
+	_, err = file.Read(header)
+	if err != nil {
+		return "", err
+	}
+
+	switch {
+	case header[0] == 0xFF && header[1] == 0xD8: // JPEG
+		return "jpeg", nil
+	case header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47: // PNG
+		return "png", nil
+	case header[0] == 0x47 && header[1] == 0x49 && header[2] == 0x46: // GIF
+		return "gif", nil
+	case header[0] == 0x42 && header[1] == 0x4D: // BMP
+		return "bmp", nil
+	default:
+		return "", fmt.Errorf("unsupported file type")
+	}
 }
 
 // DownloadFile 下载文件并保存到指定目录，返回文件路径
 func DownloadFile(url, downloadDir string) (string, error) {
-	// 设置HTTP客户端，添加超时
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	// 发起GET请求
 	response, err := client.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("请求文件[%s]失败: %w", url, err)
 	}
 	defer response.Body.Close()
 
-	// 检查响应状态
 	if response.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("获取文件[%s]失败，状态码: %d", url, response.StatusCode)
 	}
 
 	// 安全地获取文件名并构建完整路径
-	fileName := filepath.Base(url)
-	filePath := filepath.Join(downloadDir, fileName)
+	tempFileName := filepath.Base(url)
+	tempFilePath := filepath.Join(downloadDir, tempFileName)
 
 	// 检查并创建下载目录
 	if err := os.MkdirAll(downloadDir, os.ModePerm); err != nil {
 		return "", fmt.Errorf("创建目录[%s]失败: %w", downloadDir, err)
 	}
 
-	// 创建文件并处理潜在错误
-	file, err := os.Create(filePath)
+	// 创建临时文件并处理潜在错误
+	file, err := os.Create(tempFilePath)
 	if err != nil {
-		return "", fmt.Errorf("创建文件[%s]失败: %w", filePath, err)
+		return "", fmt.Errorf("创建文件[%s]失败: %w", tempFilePath, err)
 	}
 	defer file.Close()
 
-	// 将响应内容写入文件
+	// 将响应内容写入临时文件
 	if _, err := io.Copy(file, response.Body); err != nil {
-		return "", fmt.Errorf("写入文件[%s]失败: %w", filePath, err)
+		return "", fmt.Errorf("写入文件[%s]失败: %w", tempFilePath, err)
 	}
 
-	return filePath, nil
+	// 获取文件类型并重命名文件
+	imageType, err := getImageType(tempFilePath)
+	if err != nil {
+		return "", fmt.Errorf("识别文件类型失败: %w", err)
+	}
+
+	// 修改文件后缀
+	newFilePath := tempFilePath[:len(tempFilePath)-len(filepath.Ext(tempFilePath))] + "." + imageType
+	err = os.Rename(tempFilePath, newFilePath)
+	if err != nil {
+		return "", fmt.Errorf("重命名文件[%s]失败: %w", tempFilePath, err)
+	}
+
+	return newFilePath, nil
 }
 
 // UploadTempMedia 上传临时多媒体文件到微信公共平台
@@ -132,12 +175,14 @@ func UploadTempMedia(mediaType, filePath string) (*MediaResponse, error) {
 	defer response.Body.Close()
 
 	// 读取响应
-	var mediaResp MediaResponse
+	var mediaResp *MediaResponse
 	if err := json.NewDecoder(response.Body).Decode(&mediaResp); err != nil {
 		return nil, fmt.Errorf("解析响应失败: %v", err)
 	}
 
-	return &mediaResp, nil
+	ezap.Infof("上传临时媒体文件成功: %+v", mediaResp)
+
+	return mediaResp, nil
 }
 
 // UploadPermanentMedia 上传永久多媒体文件到微信公共平台
@@ -205,10 +250,12 @@ func UploadPermanentMedia(mediaType, filePath string, videoDesc *VideoDescriptio
 	defer response.Body.Close()
 
 	// 读取响应
-	var mediaResp MediaResponse
+	var mediaResp *MediaResponse
 	if err := json.NewDecoder(response.Body).Decode(&mediaResp); err != nil {
 		return nil, fmt.Errorf("解析响应失败: %v", err)
 	}
 
-	return &mediaResp, nil
+	ezap.Infof("上传永久媒体文件成功: %+v", mediaResp)
+
+	return mediaResp, nil
 }

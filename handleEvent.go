@@ -16,9 +16,10 @@ func (m *WechatmpMessage) HandleEvent() (reply *WechatmpMessage, err error) {
 		MsgId:        m.MsgId,
 		MsgType:      "text",
 	}
-	switch m.Event {
+	switch *m.Event {
 	case "subscribe":
-		reply.Content = m.subscribeMessage()
+		msg := m.subscribeMessage()
+		reply.Content = &msg
 		return
 	case "ubsubscribe":
 		// 删掉取消订阅的用户会话
@@ -35,6 +36,6 @@ func (m *WechatmpMessage) subscribeMessage() (conteng string) {
 	if subscribeMessage == "" {
 		subscribeMessage = "欢迎关注！"
 	}
-	m.Content = subscribeMessage
+	m.Content = &subscribeMessage
 	return
 }
