@@ -1,3 +1,4 @@
+// 由于没有认证公众号，暂时未测试
 package wechatmp
 
 import (
@@ -11,7 +12,7 @@ import (
 	"github.com/fimreal/goutils/ezap"
 )
 
-// 公众号发送普通文本消息(由于没有认证公众号，暂时未测试)
+// 公众号发送普通文本消息
 func SendWechatmpMessageToUser(message WechatmpMessage) error {
 	// 获取 access_token
 	accessToken, err := GetAccessToken()

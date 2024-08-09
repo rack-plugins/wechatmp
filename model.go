@@ -21,56 +21,81 @@ type AccessToken struct {
 	Expiry time.Time
 }
 
-// signature	微信加密签名，signature结合了开发者填写的token参数和请求中的timestamp参数、nonce参数。
-// timestamp	时间戳
-// nonce	随机数
-// echostr	随机字符串
+// Signature represents the structure for WeChat message verification.
 type Signature struct {
-	Signature     string `json:"signature" form:"signature" xml:"signature" validate:"required"`
-	Timestamp     string `json:"timestamp" form:"timestamp" xml:"timestamp" validate:"required"`
-	Nonce         string `json:"nonce" form:"nonce" xml:"nonce" validate:"required"`
-	Echostr       string `json:"echostr" form:"echostr" xml:"echostr" `
-	Openid        string `json:"openid" form:"openid" xml:"openid" `
-	Encrtpt_type  string `json:"encrtpt_type" form:"encrtpt_type" xml:"encrtpt_type" `
-	Msg_signature string `json:"msg_signature" form:"msg_signature" xml:"msg_signature" `
+	Signature    string `json:"signature" form:"signature" xml:"signature" validate:"required"` // WeChat encrypted signature
+	Timestamp    string `json:"timestamp" form:"timestamp" xml:"timestamp" validate:"required"` // Timestamp of the request
+	Nonce        string `json:"nonce" form:"nonce" xml:"nonce" validate:"required"`             // Random number for validation
+	Echostr      string `json:"echostr" form:"echostr" xml:"echostr"`                           // Random string used during verification
+	Openid       string `json:"openid" form:"openid" xml:"openid"`                              // User's unique identifier
+	EncryptType  string `json:"encrypt_type" form:"encrypt_type" xml:"encrypt_type"`            // Type of encryption used (e.g., aes)
+	MsgSignature string `json:"msg_signature" form:"msg_signature" xml:"msg_signature"`         // Message signature for verifying the integrity
 }
 
-// type Cdata struct {
-// 	Value string `xml:",cdata"`
-// }
-
-// 微信公众号消息结构体
+// WechatmpMessage represents the structure of a WeChat public account message.
+// 个人公众号不支持开通客服功能，仅使用被动回复功能不多
 type WechatmpMessage struct {
-	XMLName xml.Name `json:"-" xml:"xml"` // 指定 xml 根标签
+	XMLName xml.Name `json:"-" xml:"xml"` // Specify the XML root tag
 
-	ToUserName   string `json:"ToUserName" xml:"ToUserName"`
-	FromUserName string `json:"FromUserName" xml:"FromUserName"`
-	CreateTime   int64  `json:"CreateTime" xml:"CreateTime"`
-	MsgType      string `json:"MsgType" xml:"MsgType"` // event, text, image, voice, video, shortvideo, location, link
+	ToUserName   string `json:"ToUserName" xml:"ToUserName"`     // Recipient's user ID
+	FromUserName string `json:"FromUserName" xml:"FromUserName"` // Sender's public account ID
+	CreateTime   int64  `json:"CreateTime" xml:"CreateTime"`     // Message creation time (timestamp)
+	MsgType      string `json:"MsgType" xml:"MsgType"`           // Type of message: event, text, image, voice, video, shortvideo, location, link
+	MsgId        int64  `json:"MsgId" xml:"MsgId"`               // Message ID
 
-	// event
-	Event    string `json:"Event" xml:"Event"`       // subscribe, unsubscribe, SCAN, LOCATION, CLICK, VIEW
-	EventKey string `json:"EventKey" xml:"EventKey"` // 事件KEY值，qrscene_为前缀，后面为二维码的参数值，或者与自定义菜单接口中KEY值对应
+	// Event messages
+	Event    string `json:"Event,omitempty" xml:"Event,omitempty"`       // Event type: subscribe, unsubscribe, SCAN, LOCATION, CLICK, VIEW
+	EventKey string `json:"EventKey,omitempty" xml:"EventKey,omitempty"` // Key value associated with the event, such as QR code parameters or custom menu keys
 
-	// text
-	Content string `json:"Content" xml:"Content"`
-	MsgId   int64  `json:"MsgId" xml:"MsgId"`
+	// Text messages
+	Content string `json:"Content,omitempty" xml:"Content,omitempty"` // Content of the text message
 
-	MediaId string `json:"MediaId" xml:"MediaId"` // image, voice, video, shortvideo
-	// image
-	PicUrl string `json:"PicUrl" xml:"PicUrl"`
-	// voice
-	Format string `json:"Format" xml:"Format"` // amr, speex
-	// video shortvideo
-	ThumbMediaId string `json:"ThumbMediaId" xml:"ThumbMediaId"`
+	// Media messages
+	Image *Image `json:"Image,omitempty" xml:"Image,omitempty"` // Image media information
+	Voice *Voice `json:"Voice,omitempty" xml:"Voice,omitempty"` // Voice media information
+	Video *Video `json:"Video,omitempty" xml:"Video,omitempty"` // Video media information
+	Music *Music `json:"Music,omitempty" xml:"Music,omitempty"` // Music media information
 
-	// location
-	Location_X float64 `json:"Location_X" xml:"Location_X"`
-	Location_Y float64 `json:"Location_Y" xml:"Location_Y"`
-	Scale      int64   `json:"Scale" xml:"Scale"`
-	Label      string  `json:"Label" xml:"Label"`
-	// link
-	Title       string `json:"Title" xml:"Title"`
-	Description string `json:"Description" xml:"Description"`
-	URL         string `json:"URL" xml:"URL"`
+	// News messages
+	// ArticleCount int       `json:"ArticleCount,omitempty" xml:"ArticleCount,omitempty"` // Number of articles in the news message
+	// Articles     *Articles `json:"Articles,omitempty" xml:"Articles,omitempty"`         // Articles contained in the news message
+}
+
+// Image represents an image media structure.
+type Image struct {
+	MediaId string `json:"MediaId" xml:"MediaId" cdata:",chardata"` // Media ID of the image
+}
+
+// Voice represents a voice media structure.
+type Voice struct {
+	MediaId string `json:"MediaId" xml:"MediaId" cdata:",chardata"` // Media ID of the voice
+}
+
+// Video represents a video media structure.
+type Video struct {
+	MediaId     string `json:"MediaId" xml:"MediaId" cdata:",chardata"`         // Media ID of the video
+	Title       string `json:"Title" xml:"Title" cdata:",chardata"`             // Title of the video
+	Description string `json:"Description" xml:"Description" cdata:",chardata"` // Description of the video
+}
+
+// Music represents a music media structure.
+type Music struct {
+	Title        string `json:"Title" xml:"Title" cdata:",chardata"`               // Title of the music
+	Description  string `json:"Description" xml:"Description" cdata:",chardata"`   // Description of the music
+	MusicUrl     string `json:"MusicUrl" xml:"MusicUrl" cdata:",chardata"`         // URL of the music
+	HQMusicUrl   string `json:"HQMusicUrl" xml:"HQMusicUrl" cdata:",chardata"`     // High-quality music URL
+	ThumbMediaId string `json:"ThumbMediaId" xml:"ThumbMediaId" cdata:",chardata"` // Media ID of the thumbnail
+}
+
+// Articles represents a collection of articles in a news message.
+type Articles struct {
+	Items []Item `json:"Items" xml:"Articles>item"` // List of articles
+}
+
+// Item represents an individual article in a news message.
+type Item struct {
+	Title       string `json:"Title" xml:"Title" cdata:",chardata"`             // Title of the article
+	Description string `json:"Description" xml:"Description" cdata:",chardata"` // Description of the article
+	PicUrl      string `json:"PicUrl" xml:"PicUrl" cdata:",chardata"`           // Picture URL of the article
+	Url         string `json:"Url" xml:"Url" cdata:",chardata"`                 // URL of the article
 }

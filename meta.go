@@ -1,10 +1,13 @@
 package wechatmp
 
 import (
+	"net/http"
 	"strings"
 	"time"
 
+	"github.com/fimreal/goutils/ezap"
 	"github.com/fimreal/rack/module"
+	"github.com/gin-gonic/gin"
 	"github.com/rack-plugins/wechatmp/gemini"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -45,19 +48,31 @@ func ServeFlag(serveCmd *cobra.Command) {
 	serveCmd.Flags().Bool(ID+".safetymode", false, "开启安全模式")
 }
 
-func init() {
+func AddRoute(g *gin.Engine) {
 	if !viper.GetBool(ID) && !viper.GetBool("allservices") {
 		return
 	}
+	load()
+	// list route
+	g.GET("/help/"+ID, func(ctx *gin.Context) { ctx.String(http.StatusOK, `/wx`) })
 
-	// 待启动加载参数后再执行
+	r := g.Group(RoutePrefix)
+	r.GET("/wx", CheckSignature)
+	r.POST("/wx", HandleRequest)
+}
+
+func load() {
+	// if !viper.GetBool(ID) && !viper.GetBool("allservices") {
+	// 	return
+	// }
+	ezap.Infof("开始初始化公众号模块")
+
 	go func() {
+		// 延迟执行，确保启动加载变量
 		time.Sleep(3 * time.Second)
+
+		// 请求生成 wechat token
 		refreshAccessToken()
-	}()
-	go func() {
-		// 确保启动加载变量后再执行
-		time.Sleep(3 * time.Second)
 
 		modelName := viper.GetString(ID + ".modelname")
 		modelEndpoint := viper.GetString(ID + ".modelendpoint")
@@ -79,5 +94,7 @@ func init() {
 		LLM.SetModelName(modelName)
 		LLM.SetModelEndpoint(modelEndpoint)
 		LLM.SetSafetyMode(safetymode)
+
+		ezap.Infof("完成初始化模型[%s]", modelName)
 	}()
 }
